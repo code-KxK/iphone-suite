@@ -126,6 +126,7 @@ smart_jailbreak() {
             echo -e "${YELLOW}[i] Verifica compatibilidad segun tu version de iOS ($IOS_VER).${NC}"
             ;;
     esac
+    systemctl restart usbmuxd 2>/dev/null
 }
 
 force_revert_menu() {
@@ -144,6 +145,9 @@ force_revert_menu() {
         echo -e "\n${RED}[+] Ejecutando Force Revert en modo Rootless...${NC}"
         palera1n -l --force-revert
     fi
+    
+    echo -e "\n${GREEN}[✔] Operación finalizada. Reiniciando subsistema USB...${NC}"
+    systemctl restart usbmuxd 2>/dev/null
 }
 
 run_usbliter8() {
@@ -383,18 +387,23 @@ enter_recovery() {
     fi
 }
 
+wait_user() {
+    echo -e "\n${CYAN}Presiona Enter para volver al menú...${NC}"
+    read -r
+}
+
 while true; do
     show_menu
     read -r choice
     case $choice in
-        1) smart_jailbreak; echo -e "\nPresiona Enter..."; read -r ;;
-        2) force_revert_menu; echo -e "\nPresiona Enter..."; read -r ;;
+        1) smart_jailbreak; wait_user ;;
+        2) force_revert_menu; wait_user ;;
         3) run_usbliter8 ;;
-        4) enter_recovery; echo -e "\nPresiona Enter..."; read -r ;;
-        5) irecovery -n ; read -r ;;
-        6) opcion_6; echo -e "\nPresiona Enter..."; read -r ;;
-        7) opcion_7; echo -e "\nPresiona Enter..."; read -r ;;
-        8) echo -e "\n${YELLOW}Desconecta el USB y manten Bajar Volumen + Encendido para salir de DFU.${NC}" ; read -r ;;
+        4) enter_recovery; wait_user ;;
+        5) irecovery -n ; wait_user ;;
+        6) opcion_6; wait_user ;;
+        7) opcion_7; wait_user ;;
+        8) echo -e "\n${YELLOW}Desconecta el USB y manten Bajar Volumen + Encendido para salir de DFU.${NC}" ; wait_user ;;
         9) 
             if ideviceinfo &>/dev/null; then
                 ideviceinfo | grep -E "ActivationState|ProductVersion|Mode" 2>/dev/null
@@ -402,17 +411,17 @@ while true; do
                 echo -e "${YELLOW}[i] El dispositivo no está en Modo Normal. Verificando estado Recovery/DFU...${NC}"
                 irecovery -q 2>/dev/null || echo -e "${RED}[!] No se detecta ningún dispositivo conectado.${NC}"
             fi
-            read -r 
+            wait_user 
             ;;
-        10) ideviceinfo | grep -E "DeviceName|ProductType|UniqueDeviceID|HardwareModel|CPUArchitecture" 2>/dev/null ; read -r ;;
-        11) echo -e "\n${YELLOW}[+] Por favor, acepta el mensaje de 'Confiar' en la pantalla del iPhone.${NC}"; idevicepair pair; read -r ;;
+        10) ideviceinfo | grep -E "DeviceName|ProductType|UniqueDeviceID|HardwareModel|CPUArchitecture" 2>/dev/null ; wait_user ;;
+        11) echo -e "\n${YELLOW}[+] Por favor, acepta el mensaje de 'Confiar' en la pantalla del iPhone.${NC}"; idevicepair pair; wait_user ;;
         12) echo -e "\n${YELLOW}[+] Mostrando logs en vivo. Presiona Ctrl+C para salir.${NC}"; sleep 2; idevicesyslog ;;
-        13) idevicediagnostics restart 2>/dev/null ; read -r ;;
-        14) check_carrier_info; echo -e "\nPresiona Enter..."; read -r ;;
-        15) battery_diagnostics; echo -e "\nPresiona Enter..."; read -r ;;
-        16) opcion_detallada; echo -e "\nPresiona Enter..."; read -r ;;
-        17) backup_express; echo -e "\nPresiona Enter..."; read -r ;;
-        18) restore_backup; echo -e "\nPresiona Enter..."; read -r ;;
+        13) idevicediagnostics restart 2>/dev/null ; wait_user ;;
+        14) check_carrier_info; wait_user ;;
+        15) battery_diagnostics; wait_user ;;
+        16) opcion_detallada; wait_user ;;
+        17) backup_express; wait_user ;;
+        18) restore_backup; wait_user ;;
         19) echo -e "\n${GREEN}Saliendo del menú...${NC}\n" ; exit 0 ;;
         *) echo -e "\n${RED}Opción inválida.${NC}" ; sleep 1 ;;
     esac
