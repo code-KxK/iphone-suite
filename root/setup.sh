@@ -15,10 +15,11 @@ apt-get update && apt-get install -y \
     build-essential \
     git \
     curl \
+    jq \
     dos2unix \
     libusb-1.0-0-dev \
     python3 \
-    python3-pip 2>/dev/null || apt-get install -y libimobiledevice-utils irecovery usbmuxd build-essential git curl dos2unix libusb-1.0-0-dev python3 python3-pip
+    python3-pip 2>/dev/null || apt-get install -y libimobiledevice-utils irecovery usbmuxd build-essential git curl jq dos2unix libusb-1.0-0-dev python3 python3-pip
 
 echo -e "${CYAN}[+] Creando directorios del sistema...${NC}"
 mkdir -p /root/iphone-suite
@@ -46,17 +47,8 @@ if [ -d "$REPO_DIR/usbliter8" ]; then
     echo -e "${GREEN}[✔] Herramienta USBLiter8 restaurada.${NC}"
 fi
 
-# --- SELECCIÓN INTERACTIVA DE VERSIÓN DE PALERA1N ---
-echo -e "\n${CYAN}====================================================${NC}"
-echo -e "${YELLOW}       SELECCIÓN DE VERSIÓN DE PALERA1N             ${NC}"
-echo -e "${CYAN}====================================================${NC}"
-echo -e " Selecciona la versión que deseas descargar e instalar:"
-echo -e "  1) v2.4 (Estable - Recomendada para uso general)"
-echo -e "  2) v3.0.0 beta 2 (Beta / Experimental con nuevas funciones)"
-echo -e "  3) Descarga automática de la última versión oficial (Latest)"
-echo -e "${CYAN}====================================================${NC}"
-echo -n "Elige una opción [1-3] (Por defecto [1]): "
-read -r palera_choice
+# --- DETECCIÓN DINÁMICA DE VERSIONES VÍA API DE GITHUB ---
+echo -e "\n${CYAN}[+] Consultando últimas versiones en GitHub de palera1n...${NC}"
 
 ARCH=$(uname -m)
 BIN_NAME="palera1n-linux-arm64"
@@ -64,33 +56,54 @@ if [ "$ARCH" != "aarch64" ] && [ "$ARCH" != "arm64" ]; then
     BIN_NAME="palera1n-linux-x86_64"
 fi
 
+# Obtener los tags reales de las últimas publicaciones desde la API
+RELEASES_JSON=$(curl -s "https://api.github.com/repos/palera1n/palera1n/releases")
+LATEST_STABLE=$(echo "$RELEASES_JSON" | grep -v '"prerelease": true' | grep -m 1 '"tag_name":' | cut -d '"' -f 4)
+LATEST_BETA=$(echo "$RELEASES_JSON" | grep -m 1 '"tag_name":' | cut -d '"' -f 4)
+
+[ -z "$LATEST_STABLE" ] && LATEST_STABLE="v2.4"
+[ -z "$LATEST_BETA" ] && LATEST_BETA="v3.0.0-beta.1"
+
+echo -e "\n${CYAN}====================================================${NC}"
+echo -e "${YELLOW}   DETECTOR DINÁMICO DE VERSIONES PALERA1N          ${NC}"
+echo -e "${CYAN}====================================================${NC}"
+echo -e " Versiones detectadas en tiempo real:"
+echo -e "  1) Última versión ESTABLE  -> [ $LATEST_STABLE ]"
+echo -e "  2) Última versión BETA / PRE  -> [ $LATEST_BETA ]"
+echo -e "  3) Descarga automática directa (Latest generic)"
+echo -e "${CYAN}====================================================${NC}"
+echo -n "Selecciona cuál instalar [1-3] (Por defecto [1]): "
+read -r palera_choice
+
 case $palera_choice in
     2)
-        echo -e "${YELLOW}[+] Descargando palera1n v3.0.0-beta.2...${NC}"
-        URL="https://github.com/palera1n/palera1n/releases/download/v3.0.0-beta.2/$BIN_NAME"
+        SELECTED_TAG="$LATEST_BETA"
+        echo -e "${YELLOW}[+] Instalando versión Beta detectada ($SELECTED_TAG)...${NC}"
+        URL="https://github.com/palera1n/palera1n/releases/download/$SELECTED_TAG/$BIN_NAME"
         ;;
     3)
-        echo -e "${CYAN}[+] Descargando última versión registrada en GitHub...${NC}"
+        echo -e "${CYAN}[+] Instalando versión 'Latest'...${NC}"
         URL="https://github.com/palera1n/palera1n/releases/latest/download/$BIN_NAME"
         ;;
     *)
-        echo -e "${GREEN}[+] Descargando palera1n v2.4 (Estable)...${NC}"
-        URL="https://github.com/palera1n/palera1n/releases/download/v2.4/$BIN_NAME"
+        SELECTED_TAG="$LATEST_STABLE"
+        echo -e "${GREEN}[+] Instalando versión Estable detectada ($SELECTED_TAG)...${NC}"
+        URL="https://github.com/palera1n/palera1n/releases/download/$SELECTED_TAG/$BIN_NAME"
         ;;
 esac
 
 curl -Lo /usr/local/bin/palera1n "$URL"
 
-# Validación de descarga correcta (si es 404 o archivo corrupto, usa fallback)
+# Respaldo de seguridad si el asset en la beta no existe con ese nombre exacto
 if [ ! -s /usr/local/bin/palera1n ] || grep -q "Not Found" /usr/local/bin/palera1n; then
-    echo -e "${RED}[!] Error al descargar la versión seleccionada. Reintentando con versión estable (v2.4)...${NC}"
-    curl -Lo /usr/local/bin/palera1n "https://github.com/palera1n/palera1n/releases/download/v2.4/$BIN_NAME"
+    echo -e "${RED}[!] Archivo no encontrado en la API para esa versión. Aplicando descarga de respaldo...${NC}"
+    curl -Lo /usr/local/bin/palera1n "https://github.com/palera1n/palera1n/releases/latest/download/$BIN_NAME"
 fi
 
 chmod +x /usr/local/bin/palera1n
-echo -e "${GREEN}[✔] Binario palera1n instalado correctamente en /usr/local/bin/palera1n${NC}"
+echo -e "${GREEN}[✔] Binario palera1n guardado correctamente en /usr/local/bin/palera1n${NC}"
 
-echo -e "${CYAN}[+] Limpiando caracteres CRLF (formato Windows) de scripts...${NC}"
+echo -e "${CYAN}[+] Limpiando caracteres CRLF de scripts...${NC}"
 dos2unix /root/iphone-suite/install.sh 2>/dev/null
 
 echo -e "${CYAN}[+] Configurando permisos y acceso directo global 'iphone'...${NC}"
