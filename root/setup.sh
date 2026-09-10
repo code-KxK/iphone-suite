@@ -43,8 +43,8 @@ if [ -d "$SCRIPT_DIR/usbliter8" ]; then
     echo -e "${GREEN}[✔] Herramienta USBLiter8 restaurada.${NC}"
 fi
 
-# --- DETECCIÓN DINÁMICA DE VERSIONES DE PALERA1N ---
-echo -e "\n${CYAN}[+] Consultando últimas versiones disponibles en GitHub...${NC}"
+# --- DETECCIÓN DINÁMICA SEPARANDO ESTABLE Y BETA ---
+echo -e "\n${CYAN}[+] Consultando versiones disponibles en la API de GitHub...${NC}"
 
 ARCH=$(uname -m)
 BIN_NAME="palera1n-linux-arm64"
@@ -52,12 +52,17 @@ if [ "$ARCH" != "aarch64" ] && [ "$ARCH" != "arm64" ]; then
     BIN_NAME="palera1n-linux-x86_64"
 fi
 
-RELEASES_JSON=$(curl -s "https://api.github.com/repos/palera1n/palera1n/releases")
-LATEST_STABLE=$(echo "$RELEASES_JSON" | grep -v '"prerelease": true' | grep -m 1 '"tag_name":' | cut -d '"' -f 4)
-LATEST_BETA=$(echo "$RELEASES_JSON" | grep -m 1 '"tag_name":' | cut -d '"' -f 4)
+RELEASES_JSON=$(curl -sSL "https://api.github.com/repos/palera1n/palera1n/releases")
 
-[ -z "$LATEST_STABLE" ] && LATEST_STABLE="v2.4"
-[ -z "$LATEST_BETA" ] && LATEST_BETA="v3.0.0-beta.1"
+# Filtrar versión estable (excluyendo pre-releases y tags con 'beta' o 'alpha')
+LATEST_STABLE=$(echo "$RELEASES_JSON" | jq -r '.[] | select(.prerelease == false and (.tag_name | contains("beta") | not)) | .tag_name' 2>/dev/null | head -n 1)
+
+# Obtener la última versión beta o pre-release
+LATEST_BETA=$(echo "$RELEASES_JSON" | jq -r '.[] | select(.prerelease == true or (.tag_name | contains("beta"))) | .tag_name' 2>/dev/null | head -n 1)
+
+# Valores de respaldo por si falla la consulta
+[ -z "$LATEST_STABLE" ] || [ "$LATEST_STABLE" == "null" ] && LATEST_STABLE="v2.4"
+[ -z "$LATEST_BETA" ] || [ "$LATEST_BETA" == "null" ] && LATEST_BETA="v3.0.0-beta.2"
 
 echo -e "\n${CYAN}====================================================${NC}"
 echo -e "${YELLOW}   DETECTOR DINÁMICO DE VERSIONES PALERA1N          ${NC}"
@@ -65,10 +70,9 @@ echo -e "${CYAN}====================================================${NC}"
 echo -e " Versiones detectadas en tiempo real:"
 echo -e "  1) Última versión ESTABLE  -> [ $LATEST_STABLE ]"
 echo -e "  2) Última versión BETA / PRE  -> [ $LATEST_BETA ]"
-echo -e "  3) Descarga automática directa (Latest generic)"
+echo -e "  3) Descarga directa (Latest generic release)"
 echo -e "${CYAN}====================================================${NC}"
 
-# Leer selección directamente de la terminal del usuario
 echo -n "Selecciona cuál instalar [1-3] (Por defecto [1]): "
 exec 3< /dev/tty
 read -r -u 3 palera_choice
@@ -91,15 +95,17 @@ case $palera_choice in
         ;;
 esac
 
-curl -sLo /usr/local/bin/palera1n "$URL"
+# Descarga siguiendo redirecciones HTTP (-sSL)
+curl -sSL -o /usr/local/bin/palera1n "$URL"
 
+# Si la descarga falló o devolvió un archivo corrupto
 if [ ! -s /usr/local/bin/palera1n ] || grep -q "Not Found" /usr/local/bin/palera1n; then
-    echo -e "${RED}[!] Error en la descarga del binario. Aplicando fallback a versión estable...${NC}"
-    curl -sLo /usr/local/bin/palera1n "https://github.com/palera1n/palera1n/releases/latest/download/$BIN_NAME"
+    echo -e "${RED}[!] Error al descargar el binario específico. Aplicando respaldo a versión Latest...${NC}"
+    curl -sSL -o /usr/local/bin/palera1n "https://github.com/palera1n/palera1n/releases/latest/download/$BIN_NAME"
 fi
 
 chmod +x /usr/local/bin/palera1n
-echo -e "${GREEN}[✔] Binario palera1n guardado en /usr/local/bin/palera1n${NC}"
+echo -e "${GREEN}[✔] Binario palera1n guardado correctamente en /usr/local/bin/palera1n${NC}"
 
 # Configurar el acceso directo del menú
 dos2unix "$SCRIPT_DIR/root/install.sh" 2>/dev/null
