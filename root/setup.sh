@@ -33,7 +33,6 @@ if [ -f "$SCRIPT_DIR/install.sh" ]; then
     cp "$SCRIPT_DIR/install.sh" /root/iphone-suite/install.sh
 fi
 
-# Búsqueda dinámica de Gaster
 GASTER_FILE=$(find "$REPO_DIR" -name "gaster" -type f 2>/dev/null | head -n 1)
 if [ -n "$GASTER_FILE" ]; then
     cp "$GASTER_FILE" /usr/local/bin/gaster
@@ -81,14 +80,15 @@ case $palera_choice in
 esac
 
 curl -Lo /usr/local/bin/palera1n "$URL"
-if [ $? -eq 0 ] && [ -s /usr/local/bin/palera1n ]; then
-    chmod +x /usr/local/bin/palera1n
-    echo -e "${GREEN}[✔] Binario palera1n instalado correctamente en /usr/local/bin/palera1n${NC}"
-else
-    echo -e "${RED}[!] Error al descargar la versión seleccionada. Reintentando con versión por defecto...${NC}"
-    curl -Lo /usr/local/bin/palera1n "https://github.com/palera1n/palera1n/releases/latest/download/$BIN_NAME"
-    chmod +x /usr/local/bin/palera1n
+
+# Validación de descarga correcta (si es 404 o archivo corrupto, usa fallback)
+if [ ! -s /usr/local/bin/palera1n ] || grep -q "Not Found" /usr/local/bin/palera1n; then
+    echo -e "${RED}[!] Error al descargar la versión seleccionada. Reintentando con versión estable (v2.4)...${NC}"
+    curl -Lo /usr/local/bin/palera1n "https://github.com/palera1n/palera1n/releases/download/v2.4/$BIN_NAME"
 fi
+
+chmod +x /usr/local/bin/palera1n
+echo -e "${GREEN}[✔] Binario palera1n instalado correctamente en /usr/local/bin/palera1n${NC}"
 
 echo -e "${CYAN}[+] Limpiando caracteres CRLF (formato Windows) de scripts...${NC}"
 dos2unix /root/iphone-suite/install.sh 2>/dev/null
