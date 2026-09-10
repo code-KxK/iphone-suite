@@ -8,7 +8,7 @@ NC='\033[0m'
 echo -e "${CYAN}[+] Actualizando repositorios e instalando dependencias del sistema...${NC}"
 apt-get update && apt-get install -y \
     libimobiledevice-utils \
-    libimobiledevice6 \
+    libimobiledevice-1.0-6 \
     irecovery \
     usbmuxd \
     build-essential \
@@ -17,7 +17,7 @@ apt-get update && apt-get install -y \
     dos2unix \
     libusb-1.0-0-dev \
     python3 \
-    python3-pip
+    python3-pip 2>/dev/null || apt-get install -y libimobiledevice-utils irecovery usbmuxd build-essential git curl dos2unix libusb-1.0-0-dev python3 python3-pip
 
 echo -e "${CYAN}[+] Creando directorios del sistema...${NC}"
 mkdir -p /root/iphone-suite
@@ -69,7 +69,6 @@ ln -sf /root/iphone-suite/install.sh /usr/local/bin/iphone
 ln -sf /root/iphone-suite/install.sh /usr/local/bin/iphone-suite
 
 echo -e "${CYAN}[+] Reiniciando servicio usbmuxd...${NC}"
-systemctl enable usbmuxd
-systemctl restart usbmuxd
+systemctl restart usbmuxd 2>/dev/null
 
 echo -e "\n${GREEN}[✔] ¡Instalación completa y autónoma! Ya puedes usar el comando 'iphone' o 'iphone-suite'.${NC}\n"
