@@ -56,7 +56,6 @@ if [ "$ARCH" != "aarch64" ] && [ "$ARCH" != "arm64" ]; then
     BIN_NAME="palera1n-linux-x86_64"
 fi
 
-# Obtener los tags reales de las últimas publicaciones desde la API
 RELEASES_JSON=$(curl -s "https://api.github.com/repos/palera1n/palera1n/releases")
 LATEST_STABLE=$(echo "$RELEASES_JSON" | grep -v '"prerelease": true' | grep -m 1 '"tag_name":' | cut -d '"' -f 4)
 LATEST_BETA=$(echo "$RELEASES_JSON" | grep -m 1 '"tag_name":' | cut -d '"' -f 4)
@@ -72,8 +71,14 @@ echo -e "  1) Última versión ESTABLE  -> [ $LATEST_STABLE ]"
 echo -e "  2) Última versión BETA / PRE  -> [ $LATEST_BETA ]"
 echo -e "  3) Descarga automática directa (Latest generic)"
 echo -e "${CYAN}====================================================${NC}"
+
+# Leer entrada forzando la terminal activa /dev/tty
 echo -n "Selecciona cuál instalar [1-3] (Por defecto [1]): "
-read -r palera_choice
+if [ -t 0 ]; then
+    read -r palera_choice
+else
+    read -r palera_choice < /dev/tty 2>/dev/null || palera_choice="1"
+fi
 
 case $palera_choice in
     2)
@@ -94,9 +99,8 @@ esac
 
 curl -Lo /usr/local/bin/palera1n "$URL"
 
-# Respaldo de seguridad si el asset en la beta no existe con ese nombre exacto
 if [ ! -s /usr/local/bin/palera1n ] || grep -q "Not Found" /usr/local/bin/palera1n; then
-    echo -e "${RED}[!] Archivo no encontrado en la API para esa versión. Aplicando descarga de respaldo...${NC}"
+    echo -e "${RED}[!] Archivo no encontrado. Descargando versión de respaldo estable...${NC}"
     curl -Lo /usr/local/bin/palera1n "https://github.com/palera1n/palera1n/releases/latest/download/$BIN_NAME"
 fi
 
