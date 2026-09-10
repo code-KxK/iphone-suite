@@ -91,11 +91,11 @@ case $palera_choice in
         ;;
 esac
 
-curl -Lo /usr/local/bin/palera1n "$URL"
+curl -sLo /usr/local/bin/palera1n "$URL"
 
 if [ ! -s /usr/local/bin/palera1n ] || grep -q "Not Found" /usr/local/bin/palera1n; then
     echo -e "${RED}[!] Error en la descarga del binario. Aplicando fallback a versión estable...${NC}"
-    curl -Lo /usr/local/bin/palera1n "https://github.com/palera1n/palera1n/releases/latest/download/$BIN_NAME"
+    curl -sLo /usr/local/bin/palera1n "https://github.com/palera1n/palera1n/releases/latest/download/$BIN_NAME"
 fi
 
 chmod +x /usr/local/bin/palera1n
