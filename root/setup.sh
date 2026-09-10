@@ -25,25 +25,23 @@ mkdir -p /opt/usbliter8
 mkdir -p /opt/iphone_backups
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+REPO_DIR="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
 
 echo -e "${CYAN}[+] Copiando scripts y herramientas locales...${NC}"
 if [ -f "$SCRIPT_DIR/install.sh" ]; then
     cp "$SCRIPT_DIR/install.sh" /root/iphone-suite/install.sh
 fi
 
-if [ -f "$SCRIPT_DIR/gaster" ]; then
-    cp "$SCRIPT_DIR/gaster" /usr/local/bin/gaster
+# Búsqueda dinámica de Gaster
+GASTER_FILE=$(find "$REPO_DIR" -name "gaster" -type f 2>/dev/null | head -n 1)
+if [ -n "$GASTER_FILE" ]; then
+    cp "$GASTER_FILE" /usr/local/bin/gaster
     chmod +x /usr/local/bin/gaster
-    echo -e "${GREEN}[✔] Herramienta Gaster vinculada globalmente en /usr/local/bin/gaster.${NC}"
-elif [ -d "$SCRIPT_DIR/gaster" ]; then
-    cp -r "$SCRIPT_DIR/gaster" /root/
-    chmod +x /root/gaster/gaster 2>/dev/null
-    ln -sf /root/gaster/gaster /usr/local/bin/gaster
-    echo -e "${GREEN}[✔] Herramienta Gaster restaurada.${NC}"
+    echo -e "${GREEN}[✔] Herramienta Gaster instalada en /usr/local/bin/gaster.${NC}"
 fi
 
-if [ -d "$SCRIPT_DIR/usbliter8" ]; then
-    cp -r "$SCRIPT_DIR/usbliter8" /opt/
+if [ -d "$REPO_DIR/usbliter8" ]; then
+    cp -r "$REPO_DIR/usbliter8" /opt/
     chmod +x /opt/usbliter8/* 2>/dev/null
     echo -e "${GREEN}[✔] Herramienta USBLiter8 restaurada.${NC}"
 fi
@@ -55,7 +53,6 @@ if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
     chmod +x /usr/local/bin/palera1n
     echo -e "${GREEN}[✔] Binario palera1n instalado en /usr/local/bin/palera1n${NC}"
 else
-    echo -e "${RED}[!] Arquitectura $ARCH detectada. Intentando descargar versión x86_64...${NC}"
     curl -Lo /usr/local/bin/palera1n https://github.com/palera1n/palera1n/releases/latest/download/palera1n-linux-x86_64
     chmod +x /usr/local/bin/palera1n
 fi

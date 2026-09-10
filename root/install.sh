@@ -187,11 +187,11 @@ opcion_6() {
     echo -e "${YELLOW}====================================================${NC}"
     read -r -p "Presiona Enter cuando la pantalla esté en negro para aplicar Gaster..."
     
-    GASTER_BIN=""
+    GASTER_BIN="gaster"
     if [ -x "/root/iphone-suite/gaster" ]; then
-        GASTER_BIN="/root/iphone-suite/gaster"
+        GASTER_BIN="gaster"
     elif [ -x "/root/gaster/gaster" ]; then
-        GASTER_BIN="/root/gaster/gaster"
+        GASTER_BIN="gaster"
     elif command -v gaster &>/dev/null; then
         GASTER_BIN="gaster"
     fi
@@ -205,11 +205,11 @@ opcion_6() {
 
 opcion_7() {
     echo -e "\n${CYAN}[+] Verificando/Reseteando comunicación USB...${NC}"
-    GASTER_BIN=""
+    GASTER_BIN="gaster"
     if [ -x "/root/iphone-suite/gaster" ]; then
-        GASTER_BIN="/root/iphone-suite/gaster"
+        GASTER_BIN="gaster"
     elif [ -x "/root/gaster/gaster" ]; then
-        GASTER_BIN="/root/gaster/gaster"
+        GASTER_BIN="gaster"
     elif command -v gaster &>/dev/null; then
         GASTER_BIN="gaster"
     fi
