@@ -17,10 +17,11 @@ apt-get update && apt-get install -y \
     curl \
     jq \
     tar \
+    file \
     dos2unix \
     libusb-1.0-0-dev \
     python3 \
-    python3-pip 2>/dev/null || apt-get install -y libimobiledevice-utils irecovery usbmuxd build-essential git curl jq tar dos2unix libusb-1.0-0-dev python3 python3-pip
+    python3-pip 2>/dev/null || apt-get install -y libimobiledevice-utils irecovery usbmuxd build-essential git curl jq tar file dos2unix libusb-1.0-0-dev python3 python3-pip
 
 echo -e "${CYAN}[+] Creando directorios del sistema...${NC}"
 mkdir -p /root/iphone-suite
@@ -96,11 +97,12 @@ while true; do
         
         curl -sSL -o /tmp/palera1n_dl "$DOWNLOAD_URL"
 
-        # Si es archivo comprimido (.tar.gz), descompresión inteligente
-        if file /tmp/palera1n_dl | grep -qE "gzip compressed|tar archive"; then
+        # Detección por extensión o por firma GZIP (Magic bytes \x1f\x8b)
+        MAGIC_BYTES=$(head -c 2 /tmp/palera1n_dl 2>/dev/null | xxd -p 2>/dev/null || echo "")
+        if [[ "$DOWNLOAD_URL" == *".tar.gz"* ]] || [[ "$DOWNLOAD_URL" == *".tgz"* ]] || [ "$MAGIC_BYTES" == "1f8b" ]; then
             echo -e "${YELLOW}[+] Descomprimiendo paquete tar.gz...${NC}"
             tar -xzf /tmp/palera1n_dl -C /tmp/palera1n_extract/
-            EXTRACTED_BIN=$(find /tmp/palera1n_extract -type f -name "palera1n*" ! -name "*.gz" | head -n 1)
+            EXTRACTED_BIN=$(find /tmp/palera1n_extract -type f ! -name "*.gz" ! -name "*.tar" | head -n 1)
             if [ -n "$EXTRACTED_BIN" ]; then
                 mv "$EXTRACTED_BIN" /usr/local/bin/palera1n
             fi
@@ -111,13 +113,14 @@ while true; do
         rm -rf /tmp/palera1n_extract /tmp/palera1n_dl
         chmod +x /usr/local/bin/palera1n
 
-        # Verificación del ejecutable real en ELF
-        if file /usr/local/bin/palera1n | grep -q "ELF"; then
+        # Validar cabecera ejecutable ELF (\x7fELF) nativa
+        ELF_HEADER=$(head -c 4 /usr/local/bin/palera1n 2>/dev/null)
+        if [ "$ELF_HEADER" == $'\x7fELF' ]; then
             echo -e "${GREEN}[✔] Binario ejecutable palera1n instalado exitosamente.${NC}"
             break
         else
             rm -f /usr/local/bin/palera1n
-            echo -e "${RED}[!] El archivo extraído no es un binario ejecutable de Linux.${NC}"
+            echo -e "${RED}[!] El archivo extraído no es un binario ejecutable válido.${NC}"
         fi
     else
         echo -e "${RED}[!] No se encontró ningún archivo palera1n-linux-arm64 en la versión $SELECTED_TAG.${NC}"
