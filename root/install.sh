@@ -35,6 +35,14 @@ get_device_info() {
     INFO_STR="${RED}Ningun dispositivo detectado (Revisa cable o usa Opcion 11)${NC}"
 }
 
+check_palera1n() {
+    if ! command -v palera1n &> /dev/null; then
+        echo -e "${RED}[!] palera1n no está instalado en el sistema. Descargando ahora...${NC}"
+        curl -Lo /usr/local/bin/palera1n https://github.com/palera1n/palera1n/releases/latest/download/palera1n-linux-arm64
+        chmod +x /usr/local/bin/palera1n
+    fi
+}
+
 show_menu() {
     clear
     get_device_info
@@ -73,6 +81,7 @@ show_menu() {
 }
 
 smart_jailbreak() {
+    check_palera1n
     echo -e "\n${YELLOW}[+] Analizando dispositivo conectado...${NC}"
     MODEL=$(ideviceinfo 2>/dev/null | grep "ProductType" | cut -d ' ' -f 2)
     IOS_VER=$(ideviceinfo 2>/dev/null | grep "ProductVersion" | cut -d ' ' -f 2)
@@ -120,6 +129,7 @@ smart_jailbreak() {
 }
 
 force_revert_menu() {
+    check_palera1n
     echo -e "\n${RED}[!] Opción de Remoción de Jailbreak (Force Revert - palera1n)${NC}"
     echo -e "${YELLOW}Selecciona la modalidad con la que se hizo el Jailbreak en este equipo:${NC}"
     echo -e "  1) Rootless  (-l --force-revert)"
@@ -143,11 +153,9 @@ run_usbliter8() {
     if [ "$CPID" == "0x8020" ] || [ "$CPID" == "0x8030" ]; then
         echo -e "${GREEN}[+] Chip compatible detectado ($CPID). Iniciando Suite...${NC}"
         if [ -x "/opt/usbliter8/usbliter8_boot" ]; then
-            cd /opt/usbliter8
-            ./usbliter8_boot
+            cd /opt/usbliter8 && ./usbliter8_boot
         elif [ -x "/opt/usbliter8/usbliter8" ]; then
-            cd /opt/usbliter8
-            ./usbliter8
+            cd /opt/usbliter8 && ./usbliter8
         else
             echo -e "${RED}[!] No se encontró el binario compilado en /opt/usbliter8.${NC}"
         fi
@@ -162,7 +170,10 @@ run_usbliter8() {
 
 opcion_6() {
     echo -e "\n${CYAN}[+] Enviando el dispositivo a Modo Recovery...${NC}"
-    ideviceenterrecovery $(idevice_id -l 2>/dev/null) 2>/dev/null
+    UDID=$(idevice_id -l 2>/dev/null | head -n 1)
+    if [ -n "$UDID" ]; then
+        ideviceenterrecovery "$UDID" 2>/dev/null
+    fi
     
     echo -e "\n${YELLOW}====================================================${NC}"
     echo -e "${YELLOW}INSTRUCCIONES PARA MODO DFU (iPhone 7):${NC}"
@@ -172,17 +183,42 @@ opcion_6() {
     echo -e "${YELLOW}====================================================${NC}"
     read -r -p "Presiona Enter cuando la pantalla esté en negro para aplicar Gaster..."
     
-    gaster pwn 2>/dev/null || echo -e "${RED}[!] gaster no está instalado o no se detectó el dispositivo.${NC}"
+    GASTER_BIN=""
+    if [ -x "/root/iphone-suite/gaster" ]; then
+        GASTER_BIN="/root/iphone-suite/gaster"
+    elif [ -x "/root/gaster/gaster" ]; then
+        GASTER_BIN="/root/gaster/gaster"
+    elif command -v gaster &>/dev/null; then
+        GASTER_BIN="gaster"
+    fi
+
+    if [ -n "$GASTER_BIN" ]; then
+        $GASTER_BIN pwn
+    else
+        echo -e "${RED}[!] gaster no está instalado o no se encontró en las rutas del sistema.${NC}"
+    fi
 }
 
 opcion_7() {
     echo -e "\n${CYAN}[+] Verificando/Reseteando comunicación USB...${NC}"
-    SALIDA=$(gaster reset 2>&1)
-    
-    if echo "$SALIDA" | grep -q "Found the USB handle"; then
-        echo -e "\n${GREEN}[✔] ÉXITO: El bus USB y el estado DFU se comunicaron correctamente.${NC}"
+    GASTER_BIN=""
+    if [ -x "/root/iphone-suite/gaster" ]; then
+        GASTER_BIN="/root/iphone-suite/gaster"
+    elif [ -x "/root/gaster/gaster" ]; then
+        GASTER_BIN="/root/gaster/gaster"
+    elif command -v gaster &>/dev/null; then
+        GASTER_BIN="gaster"
+    fi
+
+    if [ -n "$GASTER_BIN" ]; then
+        SALIDA=$($GASTER_BIN reset 2>&1)
+        if echo "$SALIDA" | grep -q "Found the USB handle"; then
+            echo -e "\n${GREEN}[✔] ÉXITO: El bus USB y el estado DFU se comunicaron correctamente.${NC}"
+        else
+            echo -e "\n${RED}[✖] ERROR: No se pudo verificar el dispositivo en USB/DFU.${NC}"
+        fi
     else
-        echo -e "\n${RED}[✖] ERROR: No se pudo verificar el dispositivo en USB/DFU.${NC}"
+        echo -e "${RED}[!] Executable 'gaster' no encontrado.${NC}"
     fi
 }
 
