@@ -27,28 +27,24 @@ mkdir -p /opt/usbliter8
 mkdir -p /opt/iphone_backups
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-REPO_DIR="$( cd "$SCRIPT_DIR/.." &> /dev/null && pwd )"
 
-echo -e "${CYAN}[+] Copiando scripts y herramientas locales...${NC}"
-if [ -f "$SCRIPT_DIR/install.sh" ]; then
-    cp "$SCRIPT_DIR/install.sh" /root/iphone-suite/install.sh
-fi
-
-GASTER_FILE=$(find "$REPO_DIR" -name "gaster" -type f 2>/dev/null | head -n 1)
+# Copiar Gaster al sistema
+GASTER_FILE=$(find "$SCRIPT_DIR" -name "gaster" -type f 2>/dev/null | head -n 1)
 if [ -n "$GASTER_FILE" ]; then
     cp "$GASTER_FILE" /usr/local/bin/gaster
     chmod +x /usr/local/bin/gaster
-    echo -e "${GREEN}[✔] Herramienta Gaster instalada en /usr/local/bin/gaster.${NC}"
+    echo -e "${GREEN}[✔] Herramienta Gaster vinculada en /usr/local/bin/gaster.${NC}"
 fi
 
-if [ -d "$REPO_DIR/usbliter8" ]; then
-    cp -r "$REPO_DIR/usbliter8" /opt/
+# Copiar USBLiter8 si existe
+if [ -d "$SCRIPT_DIR/usbliter8" ]; then
+    cp -r "$SCRIPT_DIR/usbliter8" /opt/
     chmod +x /opt/usbliter8/* 2>/dev/null
     echo -e "${GREEN}[✔] Herramienta USBLiter8 restaurada.${NC}"
 fi
 
-# --- DETECCIÓN DINÁMICA DE VERSIONES VÍA API DE GITHUB ---
-echo -e "\n${CYAN}[+] Consultando últimas versiones en GitHub de palera1n...${NC}"
+# --- DETECCIÓN DINÁMICA DE VERSIONES DE PALERA1N ---
+echo -e "\n${CYAN}[+] Consultando últimas versiones disponibles en GitHub...${NC}"
 
 ARCH=$(uname -m)
 BIN_NAME="palera1n-linux-arm64"
@@ -72,13 +68,11 @@ echo -e "  2) Última versión BETA / PRE  -> [ $LATEST_BETA ]"
 echo -e "  3) Descarga automática directa (Latest generic)"
 echo -e "${CYAN}====================================================${NC}"
 
-# Leer entrada forzando la terminal activa /dev/tty
+# Leer selección directamente de la terminal del usuario
 echo -n "Selecciona cuál instalar [1-3] (Por defecto [1]): "
-if [ -t 0 ]; then
-    read -r palera_choice
-else
-    read -r palera_choice < /dev/tty 2>/dev/null || palera_choice="1"
-fi
+exec 3< /dev/tty
+read -r -u 3 palera_choice
+exec 3<&-
 
 case $palera_choice in
     2)
@@ -100,22 +94,20 @@ esac
 curl -Lo /usr/local/bin/palera1n "$URL"
 
 if [ ! -s /usr/local/bin/palera1n ] || grep -q "Not Found" /usr/local/bin/palera1n; then
-    echo -e "${RED}[!] Archivo no encontrado. Descargando versión de respaldo estable...${NC}"
+    echo -e "${RED}[!] Error en la descarga del binario. Aplicando fallback a versión estable...${NC}"
     curl -Lo /usr/local/bin/palera1n "https://github.com/palera1n/palera1n/releases/latest/download/$BIN_NAME"
 fi
 
 chmod +x /usr/local/bin/palera1n
-echo -e "${GREEN}[✔] Binario palera1n guardado correctamente en /usr/local/bin/palera1n${NC}"
+echo -e "${GREEN}[✔] Binario palera1n guardado en /usr/local/bin/palera1n${NC}"
 
-echo -e "${CYAN}[+] Limpiando caracteres CRLF de scripts...${NC}"
-dos2unix /root/iphone-suite/install.sh 2>/dev/null
+# Configurar el acceso directo del menú
+dos2unix "$SCRIPT_DIR/root/install.sh" 2>/dev/null
+chmod +x "$SCRIPT_DIR/root/install.sh"
+ln -sf "$SCRIPT_DIR/root/install.sh" /usr/local/bin/iphone
+ln -sf "$SCRIPT_DIR/root/install.sh" /usr/local/bin/iphone-suite
 
-echo -e "${CYAN}[+] Configurando permisos y acceso directo global 'iphone'...${NC}"
-chmod +x /root/iphone-suite/install.sh
-ln -sf /root/iphone-suite/install.sh /usr/local/bin/iphone
-ln -sf /root/iphone-suite/install.sh /usr/local/bin/iphone-suite
-
-echo -e "${CYAN}[+] Reiniciando servicio usbmuxd...${NC}"
 systemctl restart usbmuxd 2>/dev/null
 
-echo -e "\n${GREEN}[✔] ¡Instalación completa y autónoma! Ya puedes usar el comando 'iphone' o 'iphone-suite'.${NC}\n"
+echo -e "\n${GREEN}[✔] ¡Instalación completa y exitosa!${NC}"
+echo -e "${YELLOW}[i] Escribe 'iphone' en cualquier momento para iniciar el menú.${NC}\n"
