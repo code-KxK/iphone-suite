@@ -32,13 +32,13 @@ if [ -f "$SCRIPT_DIR/install.sh" ]; then
 fi
 
 if [ -f "$SCRIPT_DIR/gaster" ]; then
-    cp "$SCRIPT_DIR/gaster" /root/iphone-suite/gaster
-    chmod +x /root/iphone-suite/gaster
-fi
-
-if [ -d "$SCRIPT_DIR/gaster" ]; then
+    cp "$SCRIPT_DIR/gaster" /usr/local/bin/gaster
+    chmod +x /usr/local/bin/gaster
+    echo -e "${GREEN}[✔] Herramienta Gaster vinculada globalmente en /usr/local/bin/gaster.${NC}"
+elif [ -d "$SCRIPT_DIR/gaster" ]; then
     cp -r "$SCRIPT_DIR/gaster" /root/
     chmod +x /root/gaster/gaster 2>/dev/null
+    ln -sf /root/gaster/gaster /usr/local/bin/gaster
     echo -e "${GREEN}[✔] Herramienta Gaster restaurada.${NC}"
 fi
 
